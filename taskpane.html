@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Send to Trello</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #f4f5f7; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.10); padding: 28px 24px 24px; width: 100%; max-width: 340px; }
+    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .logo-row h1 { font-size: 17px; font-weight: 700; color: #172b4d; }
+    .logo-row span { font-size: 12px; color: #5e6c84; }
+    .email-preview { background: #f4f5f7; border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; border: 1px solid #dfe1e6; }
+    .email-preview .label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #5e6c84; margin-bottom: 4px; }
+    #emailSubject { font-size: 13px; font-weight: 600; color: #172b4d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #emailFrom { font-size: 11px; color: #5e6c84; margin-top: 3px; }
+    .trello-dest { display: flex; align-items: flex-start; gap: 8px; background: #e3fcef; border: 1px solid #abf5d1; border-radius: 8px; padding: 10px 12px; margin-bottom: 20px; }
+    .dest-label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #006644; margin-bottom: 2px; }
+    .dest-email { font-size: 11px; color: #006644; word-break: break-all; }
+    .btn-send { width: 100%; background: #0052cc; color: #fff; border: none; border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-send:hover { background: #0747a6; }
+    .btn-send:disabled { background: #b3d4ff; cursor: not-allowed; }
+    #status { margin-top: 14px; font-size: 12.5px; text-align: center; min-height: 20px; border-radius: 6px; padding: 8px 10px; display: none; }
+    #status.success { display: block; background: #e3fcef; color: #006644; border: 1px solid #abf5d1; }
+    #status.error { display: block; background: #ffebe6; color: #bf2600; border: 1px solid #ffbdad; }
+    #status.loading { display: block; background: #e8f0fe; color: #0052cc; border: 1px solid #b3d4ff; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="6" fill="#0052CC"/>
+        <rect x="5" y="5" width="9" height="18" rx="2" fill="white"/>
+        <rect x="18" y="5" width="9" height="11" rx="2" fill="white"/>
+      </svg>
+      <div>
+        <h1>Send to Trello</h1>
+        <span>Mindacks.ai · Amit Kumar Soni</span>
+      </div>
+    </div>
+
+    <div class="email-preview">
+      <div class="label">Selected Email</div>
+      <div id="emailSubject">Loading…</div>
+      <div id="emailFrom"></div>
+    </div>
+
+    <div class="trello-dest">
+      <div>
+        <div class="dest-label">➡ Forwarding to Trello Board</div>
+        <div class="dest-email">amitkumarsoni3+f3py4qnk1vszyaqhdzij@boards.trello.com</div>
+      </div>
+    </div>
+
+    <button class="btn-send" id="sendBtn" onclick="sendToTrello()">
+      ✈ Send to Trello
+    </button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    const TRELLO_EMAIL = "amitkumarsoni3+f3py4qnk1vszyaqhdzij@boards.trello.com";
+
+    Office.onReady(function(info) {
+      if (info.host === Office.HostType.Outlook) {
+        var item = Office.context.mailbox.item;
+        document.getElementById("emailSubject").textContent = item.subject || "(No Subject)";
+        if (item.from) {
+          document.getElementById("emailFrom").textContent = "From: " + (item.from.displayName || item.from.emailAddress);
+        }
+      }
+    });
+
+    function sendToTrello() {
+      var btn = document.getElementById("sendBtn");
+      var status = document.getElementById("status");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Sending…';
+      status.className = "loading";
+      status.textContent = "Forwarding to Trello…";
+
+      var item = Office.context.mailbox.item;
+      var ewsRequest =
+        '<?xml version="1.0" encoding="utf-8"?>' +
+        '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types" xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages">' +
+          '<soap:Body>' +
+            '<m:CreateItem MessageDisposition="SendAndSaveCopy">' +
+              '<m:Items>' +
+                '<t:ForwardItem>' +
+                  '<t:ToRecipients>' +
+                    '<t:Mailbox><t:EmailAddress>' + TRELLO_EMAIL + '</t:EmailAddress></t:Mailbox>' +
+                  '</t:ToRecipients>' +
+                  '<t:ReferenceItemId Id="' + item.itemId + '"/>' +
+                '</t:ForwardItem>' +
+              '</m:Items>' +
+            '</m:CreateItem>' +
+          '</soap:Body>' +
+        '</soap:Envelope>';
+
+      Office.context.mailbox.makeEwsRequestAsync(ewsRequest, function(result) {
+        btn.disabled = false;
+        btn.innerHTML = "✈ Send to Trello";
+        if (result.status === Office.AsyncResultStatus.Succeeded && result.value.indexOf("NoError") > -1) {
+          status.className = "success";
+          status.textContent = "✅ Done! Trello card will appear in your board shortly.";
+        } else {
+          status.className = "error";
+          status.textContent = "❌ Error: " + (result.error ? result.error.message : "Check permissions in manifest.");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
